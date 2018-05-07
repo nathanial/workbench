@@ -42,6 +42,7 @@ lazy val root = project.in(file(".")).settings(defaultSettings:_*).settings(
   libraryDependencies ++= Seq(
     Dependencies.akkaHttp,
     Dependencies.akka,
+    Dependencies.akkaStream,
     Dependencies.autowire.value,
     Dependencies.upickle.value
   )
