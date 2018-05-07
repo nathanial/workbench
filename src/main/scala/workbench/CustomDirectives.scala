@@ -4,15 +4,26 @@ package com.lihaoyi.workbench
 import java.io.File
 
 import akka.event.LoggingAdapter
-import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.model.{Uri, ContentType}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.model.{MediaType, HttpCharsets}
 import akka.http.scaladsl.server.directives.BasicDirectives.{extractLog, extractUnmatchedPath}
-import akka.http.scaladsl.server.directives.ContentTypeResolver
 import akka.http.scaladsl.server.directives.FileAndResourceDirectives.DirectoryRenderer
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
 
+
 import scala.annotation.tailrec
+
+object CustomContentTypeResolver extends akka.http.scaladsl.server.directives.ContentTypeResolver {
+  def apply(fileName: String): ContentType = {
+    if(fileName.endsWith(".less")){
+      ContentType(MediaType.customWithFixedCharset("text", "css", HttpCharsets.`UTF-8`))
+    } else {
+      akka.http.scaladsl.server.directives.ContentTypeResolver.Default.apply(fileName)
+    }
+  }
+}
 
 
 /**
@@ -28,6 +39,7 @@ import scala.annotation.tailrec
 
   */
 object CustomDirectives {
+  implicit val Default:  akka.http.scaladsl.server.directives.ContentTypeResolver = CustomContentTypeResolver
 
   private val followSymlinks = true
 
@@ -36,7 +48,7 @@ object CustomDirectives {
    *
    * @group fileandresource
    */
-  def getFromBrowseableDirectory(directory: String)(implicit renderer: DirectoryRenderer, resolver: ContentTypeResolver): Route =
+  def getFromBrowseableDirectory(directory: String)(implicit renderer: DirectoryRenderer): Route =
     getFromBrowseableDirectories(directory)
 
   /**
@@ -45,7 +57,7 @@ object CustomDirectives {
    *
    * @group fileandresource
    */
-  def getFromBrowseableDirectories(directories: String*)(implicit renderer: DirectoryRenderer, resolver: ContentTypeResolver): Route = {
+  def getFromBrowseableDirectories(directories: String*)(implicit renderer: DirectoryRenderer): Route = {
     directories.map(getFromDirectory).reduceLeft(_ ~ _) ~ listDirectoryContents(directories: _*)
   }
 
@@ -56,7 +68,7 @@ object CustomDirectives {
    *
    * @group fileandresource
    */
-  def getFromDirectory(directoryName: String)(implicit resolver: ContentTypeResolver): Route =
+  def getFromDirectory(directoryName: String): Route =
     extractUnmatchedPath { unmatchedPath ⇒
       extractLog { log ⇒
         safeDirectoryChildPath(withTrailingSlash(directoryName), unmatchedPath, log) match {
