@@ -49,13 +49,13 @@ object WorkbenchPlugin extends AutoPlugin {
             if(lastModified < file.lastModified()){
               modificationTimes.update(file.getAbsolutePath, file.lastModified())
               changed = true
-              println("Changed", file.getAbsolutePath)
+//              println("Changed", file.getAbsolutePath)
             }
           }
           case None => {
             modificationTimes.update(file.getAbsolutePath, file.lastModified())
             changed = true
-            println("Changed", file.getAbsolutePath)
+//            println("Changed", file.getAbsolutePath)
           }
         }
       }
