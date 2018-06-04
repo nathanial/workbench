@@ -27,7 +27,8 @@ object WorkbenchPlugin extends AutoPlugin {
   }
 
   object autoImport {
-    val refreshBrowsers = taskKey[Unit]("Sends a message to all connected web pages asking them to refresh the page")
+      val changedScalaFiles = taskKey[List[String]]("Provides the addresses of the Scala files that have changed")
+      val refreshBrowsers = taskKey[Unit]("Sends a message to all connected web pages asking them to refresh the page")
   }
   import autoImport._
   import WorkbenchBasePlugin.server
@@ -36,30 +37,32 @@ object WorkbenchPlugin extends AutoPlugin {
   val modificationTimes = mutable.HashMap[String, Long]()
 
   val workbenchSettings = Seq(
-    refreshBrowsers := {
-      streams.value.log.info("workbench: Reloading Pages...")
+    changedScalaFiles := {
+      val streamsValue = streams.value
+      var files: List[String] = Nil
       val scalaFiles = (
         globFiles((baseDirectory.value / "src").getAbsolutePath, ".scala")
-        ++ globFiles((baseDirectory.value / "target/scala-2.12/src_managed").getAbsolutePath, ".scala")
-      )
-      var changed = false
-      for(file <- scalaFiles){
-        modificationTimes.get(file.getAbsolutePath) match {
-          case Some(lastModified) => {
-            if(lastModified < file.lastModified()){
-              modificationTimes.update(file.getAbsolutePath, file.lastModified())
-              changed = true
-//              println("Changed", file.getAbsolutePath)
-            }
-          }
-          case None => {
-            modificationTimes.update(file.getAbsolutePath, file.lastModified())
-            changed = true
-//            println("Changed", file.getAbsolutePath)
-          }
-        }
+          ++ globFiles((baseDirectory.value / "target/scala-2.12/src_managed").getAbsolutePath, ".scala")
+        )
+      for(x <- scalaFiles){
+        println("workbench: Checking Scala" + x.getName)
+        FileFunction.cached(streamsValue.cacheDirectory / x.getName, FilesInfo.lastModified, FilesInfo.lastModified) {
+          (f: Set[File]) =>
+            val fsPath = f.head.getAbsolutePath.drop(new File("").getAbsolutePath.length)
+            files = fsPath :: files
+            f
+        }(Set(x))
       }
-      if(changed){
+      files
+    },
+
+    refreshBrowsers := {
+      streams.value.log.info("workbench: Reloading Pages...")
+      val scalaFiles = changedScalaFiles.value
+      for(file <- scalaFiles){
+        println("Le File", file)
+      }
+      if(!scalaFiles.isEmpty){
         println("IT CHANGED")
         server.value.Wire[Api].reload().call()
       }
