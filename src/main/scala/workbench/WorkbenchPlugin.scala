@@ -40,6 +40,7 @@ object WorkbenchPlugin extends AutoPlugin {
     changedScalaFiles := {
       val streamsValue = streams.value
       var files: List[String] = Nil
+      println("Cache Directory", streamsValue.cacheDirectory)
       val scalaFiles = (
         globFiles((baseDirectory.value / "src").getAbsolutePath, ".scala")
           ++ globFiles((baseDirectory.value / "target/scala-2.12/src_managed").getAbsolutePath, ".scala")
